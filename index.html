@@ -297,7 +297,7 @@
                     </div>
                     <div>
                         <label for="event-value" class="block text-gray-700 text-sm font-bold mb-2">Valor (R$):</label>
-                        <input type="number" step="any" id="event-value" placeholder="150.00" class="form-input shadow-sm appearance-none border rounded-md w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2" required>
+                        <input type="text" inputmode="decimal" id="event-value" placeholder="1.234,56" class="form-input shadow-sm appearance-none border rounded-md w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2" required>
                     </div>
                 </div>
                 <div>
@@ -337,8 +337,8 @@
         document.addEventListener('DOMContentLoaded', () => {
             // State
             let currentDate = new Date();
-            const eventsKey = 'calendarEvents_SeteSolucoes_v13';
-            const appInfoKey = 'appInfo_SeteSolucoes_v13';
+            const eventsKey = 'calendarEvents_SeteSolucoes_v14';
+            const appInfoKey = 'appInfo_SeteSolucoes_v14';
             let events = JSON.parse(localStorage.getItem(eventsKey)) || [];
             let appInfo = JSON.parse(localStorage.getItem(appInfoKey)) || { name: '', cnpj: '', calendarTitle: 'Calendário de Impostos' };
             let eventIdToDelete = null;
@@ -366,6 +366,35 @@
             const confirmModal = document.getElementById('confirm-modal');
             const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
             const confirmCancelBtn = document.getElementById('confirm-cancel-btn');
+
+            // --- Helper Functions ---
+            const parseCurrency = (valueStr) => {
+                if (typeof valueStr !== 'string' || !valueStr) return 0;
+                // Remove all characters except digits and comma
+                const cleaned = valueStr.replace(/[^\d,]/g, '').replace(',', '.');
+                return parseFloat(cleaned) || 0;
+            };
+
+            const formatCurrencyForDisplay = (value) => {
+                const numberValue = parseFloat(value);
+                if (isNaN(numberValue)) return '';
+                // Use Intl.NumberFormat for robust formatting
+                return new Intl.NumberFormat('pt-BR', {
+                    style: 'currency',
+                    currency: 'BRL',
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 10
+                }).format(numberValue);
+            };
+
+            const formatCurrencyForInput = (value) => {
+                const numberValue = parseFloat(value);
+                if (isNaN(numberValue)) return '';
+                 return new Intl.NumberFormat('pt-BR', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 10
+                }).format(numberValue);
+            };
 
             // --- App Info Logic ---
             const loadAppInfo = () => {
@@ -428,11 +457,7 @@
                             eventEl.className = `event-item event-${event.type}`;
                             eventEl.dataset.eventId = event.id;
                             
-                            const formattedValue = parseFloat(event.value).toLocaleString('pt-BR', {
-                                style: 'currency',
-                                currency: 'BRL',
-                                minimumFractionDigits: 2,
-                            });
+                            const formattedValue = formatCurrencyForDisplay(event.value);
 
                             eventEl.innerHTML = `
                                 <span class="delete-icon" data-delete-id="${event.id}">×</span>
@@ -459,6 +484,7 @@
                 eventForm.reset();
                 const eventIdInput = document.getElementById('event-id');
                 const eventDateInput = document.getElementById('event-date');
+                const eventValueInput = document.getElementById('event-value');
                 
                 if (eventId) {
                     const event = events.find(e => e.id === eventId);
@@ -467,7 +493,7 @@
                     document.getElementById('event-tax-name').value = event.taxName;
                     document.getElementById('event-title').value = event.title;
                     eventDateInput.value = event.date;
-                    document.getElementById('event-value').value = event.value;
+                    eventValueInput.value = formatCurrencyForInput(event.value);
                     document.getElementById('event-type').value = event.type;
                     deleteEventBtn.classList.remove('hidden');
                 } else {
@@ -535,7 +561,7 @@
                     taxName: document.getElementById('event-tax-name').value,
                     title: document.getElementById('event-title').value,
                     date: document.getElementById('event-date').value,
-                    value: document.getElementById('event-value').value,
+                    value: parseCurrency(document.getElementById('event-value').value),
                     type: document.getElementById('event-type').value,
                 };
 
