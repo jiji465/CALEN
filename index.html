@@ -187,7 +187,7 @@
                 </div>
                 <div class="flex items-center space-x-3 mt-4 sm:mt-0 flex-shrink-0" id="header-buttons">
                     <button id="share-btn" class="btn bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg shadow-md flex items-center space-x-2">
-                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
                         <span>Partilhar</span>
                     </button>
                     <button id="export-pdf-btn" class="btn btn-accent font-bold py-2 px-4 rounded-lg shadow-md flex items-center space-x-2">
@@ -197,6 +197,10 @@
                     <button id="add-event-btn" class="btn btn-primary font-bold py-2 px-4 rounded-lg shadow-md flex items-center space-x-2">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
                         <span>Adicionar</span>
+                    </button>
+                    <button id="fork-calendar-btn" class="btn bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg shadow-md flex items-center space-x-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 1-6 6"/><path d="M6 8a6 6 0 0 0 6 6v7"/><path d="M6 3v5"/><path d="M18 3v5"/><circle cx="6" cy="3" r="2"/><circle cx="18" cy="3" r="2"/><circle cx="12" cy="21" r="2"/></svg>
+                        <span>Gerar link desta edição</span>
                     </button>
                 </div>
             </header>
@@ -299,6 +303,7 @@
             let calendarId = null;
             let isViewOnly = false;
             let saveTimeout;
+            let eventIdToDelete = null;
 
             // DOM Elements
             const appEl = document.getElementById('app');
@@ -309,6 +314,7 @@
             const addEventBtn = document.getElementById('add-event-btn');
             const exportPdfBtn = document.getElementById('export-pdf-btn');
             const shareBtn = document.getElementById('share-btn');
+            const forkCalendarBtn = document.getElementById('fork-calendar-btn');
             const loadingSpinner = document.getElementById('loading-spinner');
             const loadingText = document.getElementById('loading-text');
             const clientNameInput = document.getElementById('client-name-input');
@@ -483,6 +489,10 @@
                                             <label class="block text-gray-700 text-sm font-bold mb-2">Nome da Obrigação:</label>
                                             <input type="text" id="event-tax-name" class="form-input shadow-sm w-full" value="${props.event?.taxName || ''}" required>
                                         </div>
+                                        <div>
+                                            <label class="block text-gray-700 text-sm font-bold mb-2">Título/Descrição:</label>
+                                            <input type="text" id="event-title" class="form-input shadow-sm w-full" value="${props.event?.title || ''}" placeholder="Ex.: Guia de ICMS">
+                                        </div>
                                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                             <div>
                                                 <label class="block text-gray-700 text-sm font-bold mb-2">Data:</label>
@@ -609,11 +619,17 @@
                     case 'share':
                         const copyBtn = document.getElementById('copy-link-btn');
                         const linkInput = document.getElementById('share-link-input');
-                        copyBtn.addEventListener('click', () => {
-                            linkInput.select();
-                            document.execCommand('copy');
-                            copyBtn.textContent = 'Copiado!';
-                            setTimeout(() => copyBtn.textContent = 'Copiar Link', 2000);
+                        copyBtn.addEventListener('click', async () => {
+                            try {
+                                await navigator.clipboard.writeText(linkInput.value);
+                                copyBtn.textContent = 'Copiado!';
+                                setTimeout(() => copyBtn.textContent = 'Copiar Link', 2000);
+                            } catch {
+                                linkInput.select();
+                                document.execCommand('copy');
+                                copyBtn.textContent = 'Copiado!';
+                                setTimeout(() => copyBtn.textContent = 'Copiar Link', 2000);
+                            }
                         });
                         document.getElementById('close-share-btn').addEventListener('click', closeModal);
                         break;
@@ -621,19 +637,31 @@
                         document.getElementById('close-new-calendar-btn').addEventListener('click', closeModal);
                         const copyEditBtn = document.getElementById('copy-edit-link-btn');
                         const editLinkInput = document.getElementById('edit-link-input');
-                        copyEditBtn.addEventListener('click', () => {
-                            editLinkInput.select();
-                            document.execCommand('copy');
-                            copyEditBtn.textContent = 'Copiado!';
-                            setTimeout(() => copyEditBtn.textContent = 'Copiar', 2000);
+                        copyEditBtn.addEventListener('click', async () => {
+                            try {
+                                await navigator.clipboard.writeText(editLinkInput.value);
+                                copyEditBtn.textContent = 'Copiado!';
+                                setTimeout(() => copyEditBtn.textContent = 'Copiar', 2000);
+                            } catch {
+                                editLinkInput.select();
+                                document.execCommand('copy');
+                                copyEditBtn.textContent = 'Copiado!';
+                                setTimeout(() => copyEditBtn.textContent = 'Copiar', 2000);
+                            }
                         });
                         const copyShareBtn = document.getElementById('copy-share-link-btn');
                         const shareLinkInput = document.getElementById('share-link-input-new');
-                        copyShareBtn.addEventListener('click', () => {
-                            shareLinkInput.select();
-                            document.execCommand('copy');
-                            copyShareBtn.textContent = 'Copiado!';
-                            setTimeout(() => copyShareBtn.textContent = 'Copiar', 2000);
+                        copyShareBtn.addEventListener('click', async () => {
+                            try {
+                                await navigator.clipboard.writeText(shareLinkInput.value);
+                                copyShareBtn.textContent = 'Copiado!';
+                                setTimeout(() => copyShareBtn.textContent = 'Copiar', 2000);
+                            } catch {
+                                shareLinkInput.select();
+                                document.execCommand('copy');
+                                copyShareBtn.textContent = 'Copiado!';
+                                setTimeout(() => copyShareBtn.textContent = 'Copiar', 2000);
+                            }
                         });
                         break;
                 }
@@ -707,6 +735,37 @@
                 renderModal('share', { shareLink: viewLink });
             });
 
+            // --- Fork/Clone current calendar to generate independent links ---
+            forkCalendarBtn.addEventListener('click', async () => {
+                if (!PUBLIC_URL) {
+                    alert('Configure o PUBLIC_URL para gerar links corretamente.');
+                    return;
+                }
+                showLoading('A gerar link desta edição...');
+                try {
+                    const newDocRef = await addDoc(
+                        collection(db, "artifacts", appId, "public/data/calendars"),
+                        {
+                            ...state,
+                            parentId: calendarId || null,
+                            forkedFrom: calendarId || null,
+                            forkedAt: serverTimestamp(),
+                            createdAt: serverTimestamp()
+                        }
+                    );
+                    const newId = newDocRef.id;
+                    const baseUrl = getBaseUrl();
+                    const editLink = `${baseUrl}?id=${newId}`;
+                    const viewLink = `${baseUrl}?view=${newId}`;
+                    hideLoading();
+                    renderModal('newCalendarInfo', { editLink, viewLink });
+                } catch (error) {
+                    console.error('Erro ao gerar link da edição:', error);
+                    hideLoading();
+                    alert('Não foi possível gerar o link desta edição.');
+                }
+            });
+
             // --- PDF Export ---
             exportPdfBtn.addEventListener('click', () => {
                 showLoading('A gerar PDF...');
@@ -738,12 +797,12 @@
                 const pageWidth = doc.internal.pageSize.getWidth();
                 const margin = 15;
                 
-                doc.setFont('Poppins', 'bold');
+                doc.setFont('helvetica', 'bold');
                 doc.setFontSize(16);
                 doc.setTextColor(31, 45, 90); // --brand-blue
                 doc.text('Sete Soluções Fiscais', pageWidth / 2, margin, { align: 'center' });
 
-                doc.setFont('Poppins', 'normal');
+                doc.setFont('helvetica', 'normal');
                 doc.setFontSize(12);
                 doc.setTextColor(232, 160, 33); // --brand-gold
                 doc.text(state.appInfo.calendarTitle, pageWidth / 2, margin + 7, { align: 'center' });
@@ -763,7 +822,7 @@
                         textColor: [255, 255, 255]
                     },
                     styles: {
-                        font: 'Poppins',
+                        font: 'helvetica',
                         fontSize: 9
                     },
                     columnStyles: {
@@ -779,7 +838,7 @@
                 doc.text(`Exportado em: ${dateString} às ${timeString}`, pageWidth / 2, doc.internal.pageSize.getHeight() - 10, { align: 'center' });
 
                 const monthYear = currentMonthYearEl.textContent.replace(' de ', '_');
-                const clientName = appInfo.name.replace(/ /g, '_') || 'cliente';
+                const clientName = (state.appInfo.name || '').replace(/ /g, '_') || 'cliente';
                 doc.save(`Calendario_${clientName}_${monthYear}.pdf`);
                 
                 hideLoading();
