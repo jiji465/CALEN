@@ -15,14 +15,14 @@
     
     <!-- PDF Export Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
 
     <style>
         :root {
             --brand-blue: #1F2D5A;
             --brand-gold: #E8A021;
-            --brand-gold-light: #fdf2e1;
-            --brand-gold-dark: #d58c0a;
+            --brand-green: #10B981;
+            --brand-red: #EF4444;
         }
         body {
             font-family: 'Poppins', sans-serif;
@@ -99,15 +99,20 @@
             color: white;
             transform: translateY(-50%) scale(1.1);
         }
-        .event-imposto {
-            background-color: var(--brand-gold-light);
+        .event-pendente {
+            background-color: #fdf2e1;
             color: #8c5a03;
             border-left-color: var(--brand-gold);
         }
-        .event-parcelamento {
-            background-color: #e9ecef;
-            color: #343a40;
-            border-left-color: #868e96;
+        .event-pago {
+            background-color: #D1FAE5;
+            color: #065F46;
+            border-left-color: var(--brand-green);
+        }
+        .event-em_atraso {
+            background-color: #FEE2E2;
+            color: #991B1B;
+            border-left-color: var(--brand-red);
         }
         .modal-backdrop {
             position: fixed;
@@ -159,40 +164,17 @@
             background-color: var(--brand-gold);
             color: var(--brand-blue);
         }
-        
-        /* PDF Export Specific Styles */
-        .is-printing #header-text-container,
-        .is-printing #client-info-wrapper {
-            text-align: center;
-        }
-        .is-printing #header-text-container {
-            width: 100%;
-        }
-        .is-printing #header-buttons,
-        .is-printing #calendar-title-input,
-        .is-printing #client-name-input,
-        .is-printing #client-cnpj-input,
-        .is-printing .delete-icon {
-            display: none;
-        }
-        .is-printing #calendar-title-pdf,
-        .is-printing #client-name-pdf,
-        .is-printing #client-cnpj-pdf,
-        .is-printing #export-footer {
-            display: block;
-        }
-        .is-printing #client-info-wrapper .grid {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 0.5rem;
-        }
     </style>
 </head>
 <body class="antialiased text-gray-800">
 
-    <div id="app" class="max-w-screen-2xl mx-auto p-4 sm:p-6 lg:p-8">
+    <div id="app" class="max-w-screen-2xl mx-auto p-4 sm:p-6 lg:p-8 opacity-0 transition-opacity duration-500">
         
+        <!-- View Only Banner -->
+        <div id="view-only-banner" class="hidden bg-yellow-200 text-yellow-800 text-center p-2 rounded-lg mb-4">
+            <strong>Modo Consulta:</strong> Apenas visualização permitida.
+        </div>
+
         <div id="export-area">
             <!-- Header -->
             <header class="flex flex-col sm:flex-row justify-between items-center mb-8">
@@ -201,10 +183,13 @@
                     <div id="calendar-title-container" class="mt-2">
                         <label for="calendar-title-input" class="sr-only">Título do Calendário</label>
                         <input type="text" id="calendar-title-input" placeholder="Calendário de Impostos" class="form-input w-full sm:w-1/2 text-lg p-1 border-gray-300 rounded bg-transparent focus:bg-white" style="color: var(--brand-gold);">
-                        <p id="calendar-title-pdf" class="hidden text-lg" style="color: var(--brand-gold);"></p>
                     </div>
                 </div>
                 <div class="flex items-center space-x-3 mt-4 sm:mt-0 flex-shrink-0" id="header-buttons">
+                    <button id="share-btn" class="btn bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg shadow-md flex items-center space-x-2">
+                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+                        <span>Partilhar</span>
+                    </button>
                     <button id="export-pdf-btn" class="btn btn-accent font-bold py-2 px-4 rounded-lg shadow-md flex items-center space-x-2">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="M12 18v-6"/><path d="m15 15-3 3-3-3"/></svg>
                         <span>Exportar</span>
@@ -222,13 +207,27 @@
                     <div id="client-name-container">
                         <label for="client-name-input" class="block text-sm font-medium text-gray-600 mb-1">Nome do Cliente:</label>
                         <input type="text" id="client-name-input" placeholder="Digite o nome do cliente" class="form-input w-full py-2 px-3 rounded-md border text-gray-700 leading-tight focus:outline-none focus:ring-2">
-                        <div id="client-name-pdf" class="hidden text-gray-800 pt-2 text-lg"></div>
                     </div>
                     <div id="client-cnpj-container">
                         <label for="client-cnpj-input" class="block text-sm font-medium text-gray-600 mb-1">CNPJ:</label>
                         <input type="text" id="client-cnpj-input" placeholder="00.000.000/0001-00" class="form-input w-full py-2 px-3 rounded-md border text-gray-700 leading-tight focus:outline-none focus:ring-2">
-                        <div id="client-cnpj-pdf" class="hidden text-gray-800 pt-2 text-lg"></div>
                     </div>
+                </div>
+            </div>
+
+            <!-- Summary Dashboard -->
+            <div id="summary-dashboard" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 text-center">
+                    <h4 class="text-sm font-semibold text-gray-500">Total a Pagar no Mês</h4>
+                    <p id="summary-total" class="text-2xl font-bold" style="color: var(--brand-blue);"></p>
+                </div>
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 text-center">
+                    <h4 class="text-sm font-semibold text-gray-500">Total Pago</h4>
+                    <p id="summary-paid" class="text-2xl font-bold" style="color: var(--brand-green);"></p>
+                </div>
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 text-center">
+                    <h4 class="text-sm font-semibold text-gray-500">Total Pendente</h4>
+                    <p id="summary-pending" class="text-2xl font-bold" style="color: var(--brand-red);"></p>
                 </div>
             </div>
 
@@ -258,176 +257,160 @@
                     <!-- Calendar days will be generated by JS -->
                 </div>
             </div>
-            
-            <!-- Export Footer -->
-            <div id="export-footer" class="hidden text-center text-sm text-gray-500 mt-4">
-                <p id="export-date"></p>
-            </div>
         </div>
         
-        <!-- Loading Spinner for PDF generation -->
+        <!-- Loading Spinner -->
         <div id="loading-spinner" class="hidden fixed inset-0 bg-gray-900 bg-opacity-70 flex items-center justify-center z-50">
             <div class="flex flex-col items-center bg-white p-8 rounded-lg shadow-xl">
                 <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4" style="border-color: var(--brand-gold);"></div>
-                <p class="mt-4 text-lg font-semibold text-gray-700">Gerando PDF, por favor aguarde...</p>
+                <p id="loading-text" class="mt-4 text-lg font-semibold text-gray-700">Aguarde...</p>
             </div>
         </div>
     </div>
 
-    <!-- Event Modal -->
-    <div id="event-modal" class="modal-backdrop hidden">
-        <div class="modal-content p-0">
-            <div class="modal-header">
-                <h3 id="modal-title" class="text-2xl font-bold">Adicionar Vencimento</h3>
-            </div>
-            <form id="event-form" class="p-6 space-y-4">
-                <input type="hidden" id="event-id">
-                <div>
-                    <label for="event-tax-name" class="block text-gray-700 text-sm font-bold mb-2">Nome do Imposto/Obrigação:</label>
-                    <input type="text" id="event-tax-name" class="form-input shadow-sm appearance-none border rounded-md w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2" placeholder="Ex: DAS, ICMS, Aluguel" required>
-                </div>
-                <div>
-                    <label for="event-title" class="block text-gray-700 text-sm font-bold mb-2">Observações (Opcional):</label>
-                    <input type="text" id="event-title" placeholder="Ex: Ref. competência 07/2025" class="form-input shadow-sm appearance-none border rounded-md w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2">
-                </div>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                        <label for="event-date" class="block text-gray-700 text-sm font-bold mb-2">Data:</label>
-                        <input type="date" id="event-date" class="form-input shadow-sm appearance-none border rounded-md w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2" required>
-                    </div>
-                    <div>
-                        <label for="event-value" class="block text-gray-700 text-sm font-bold mb-2">Valor (R$):</label>
-                        <input type="text" inputmode="decimal" id="event-value" placeholder="1.234,56" class="form-input shadow-sm appearance-none border rounded-md w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2" required>
-                    </div>
-                </div>
-                <div>
-                    <label for="event-type" class="block text-gray-700 text-sm font-bold mb-2">Tipo:</label>
-                    <select id="event-type" class="form-select shadow-sm border rounded-md w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2">
-                        <option value="imposto">Imposto</option>
-                        <option value="parcelamento">Parcelamento</option>
-                    </select>
-                </div>
-                <div class="flex items-center justify-end space-x-3 pt-4">
-                    <button type="button" id="delete-event-btn" class="btn bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline hidden">Excluir</button>
-                    <button type="button" id="cancel-btn" class="btn bg-gray-400 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline">Cancelar</button>
-                    <button type="submit" class="btn btn-primary font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline">Salvar</button>
-                </div>
-            </form>
-        </div>
-    </div>
-    
-    <!-- Confirmation Modal -->
-    <div id="confirm-modal" class="modal-backdrop hidden">
-        <div class="modal-content p-0">
-             <div class="modal-header">
-                <h3 class="text-xl font-bold">Confirmar Exclusão</h3>
-            </div>
-            <div class="p-6">
-                <p class="text-gray-600 mb-6">Tem certeza de que deseja excluir este evento? Esta ação não pode ser desfeita.</p>
-                <div class="flex items-center justify-end space-x-3">
-                    <button type="button" id="confirm-cancel-btn" class="btn bg-gray-400 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg">Cancelar</button>
-                    <button type="button" id="confirm-delete-btn" class="btn bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg">Excluir</button>
-                </div>
-            </div>
-        </div>
-    </div>
+    <!-- Modals -->
+    <div id="modal-container"></div>
 
+    <script type="module">
+        // Firebase Imports
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, signInWithCustomToken, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, addDoc, collection, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        
+        // --- CONFIGURAÇÃO ---
+        const PUBLIC_URL = 'https://calendario-sete.vercel.app/'; // <<< SUBSTITUA PELO SEU URL REAL
 
-    <script>
+        // --- Firebase Setup ---
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : { apiKey: "DEMO", authDomain: "DEMO", projectId: "DEMO" };
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
         document.addEventListener('DOMContentLoaded', () => {
             // State
             let currentDate = new Date();
-            const eventsKey = 'calendarEvents_SeteSolucoes_v14';
-            const appInfoKey = 'appInfo_SeteSolucoes_v14';
-            let events = JSON.parse(localStorage.getItem(eventsKey)) || [];
-            let appInfo = JSON.parse(localStorage.getItem(appInfoKey)) || { name: '', cnpj: '', calendarTitle: 'Calendário de Impostos' };
-            let eventIdToDelete = null;
+            let state = {
+                appInfo: { name: '', cnpj: '', calendarTitle: 'Calendário de Impostos' },
+                events: []
+            };
+            let calendarId = null;
+            let isViewOnly = false;
+            let saveTimeout;
 
             // DOM Elements
+            const appEl = document.getElementById('app');
             const calendarGrid = document.getElementById('calendar-grid');
             const currentMonthYearEl = document.getElementById('current-month-year');
             const prevMonthBtn = document.getElementById('prev-month-btn');
             const nextMonthBtn = document.getElementById('next-month-btn');
-            const eventModal = document.getElementById('event-modal');
-            const eventForm = document.getElementById('event-form');
-            const modalTitle = document.getElementById('modal-title');
-            const deleteEventBtn = document.getElementById('delete-event-btn');
-            const cancelBtn = document.getElementById('cancel-btn');
             const addEventBtn = document.getElementById('add-event-btn');
             const exportPdfBtn = document.getElementById('export-pdf-btn');
+            const shareBtn = document.getElementById('share-btn');
             const loadingSpinner = document.getElementById('loading-spinner');
+            const loadingText = document.getElementById('loading-text');
             const clientNameInput = document.getElementById('client-name-input');
             const clientCnpjInput = document.getElementById('client-cnpj-input');
             const calendarTitleInput = document.getElementById('calendar-title-input');
-            const clientNamePdf = document.getElementById('client-name-pdf');
-            const clientCnpjPdf = document.getElementById('client-cnpj-pdf');
-            const calendarTitlePdf = document.getElementById('calendar-title-pdf');
-            const exportArea = document.getElementById('export-area');
-            const confirmModal = document.getElementById('confirm-modal');
-            const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
-            const confirmCancelBtn = document.getElementById('confirm-cancel-btn');
+            const modalContainer = document.getElementById('modal-container');
+            const viewOnlyBanner = document.getElementById('view-only-banner');
+            const summaryTotalEl = document.getElementById('summary-total');
+            const summaryPaidEl = document.getElementById('summary-paid');
+            const summaryPendingEl = document.getElementById('summary-pending');
 
             // --- Helper Functions ---
+            const getBaseUrl = () => {
+                const url = PUBLIC_URL || window.location.href;
+                return url.split('?')[0];
+            };
+
             const parseCurrency = (valueStr) => {
                 if (typeof valueStr !== 'string' || !valueStr) return 0;
-                // Remove all characters except digits and comma
                 const cleaned = valueStr.replace(/[^\d,]/g, '').replace(',', '.');
                 return parseFloat(cleaned) || 0;
             };
 
-            const formatCurrencyForDisplay = (value) => {
+            const formatCurrency = (value) => {
                 const numberValue = parseFloat(value);
-                if (isNaN(numberValue)) return '';
-                // Use Intl.NumberFormat for robust formatting
+                if (isNaN(numberValue)) return 'R$ 0,00';
                 return new Intl.NumberFormat('pt-BR', {
                     style: 'currency',
-                    currency: 'BRL',
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 10
+                    currency: 'BRL'
                 }).format(numberValue);
             };
 
-            const formatCurrencyForInput = (value) => {
-                const numberValue = parseFloat(value);
-                if (isNaN(numberValue)) return '';
-                 return new Intl.NumberFormat('pt-BR', {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 10
-                }).format(numberValue);
+            const showLoading = (text = 'Aguarde...') => {
+                loadingText.textContent = text;
+                loadingSpinner.classList.remove('hidden');
+            };
+
+            const hideLoading = () => {
+                loadingSpinner.classList.add('hidden');
+            };
+
+            // --- Data Persistence (Firestore) ---
+            const saveData = async () => {
+                if (isViewOnly || !calendarId) return;
+                try {
+                    const docRef = doc(db, "artifacts", appId, "public/data/calendars", calendarId);
+                    await setDoc(docRef, { ...state, updatedAt: serverTimestamp() }, { merge: true });
+                } catch (error) {
+                    console.error("Error saving data: ", error);
+                    alert("Ocorreu um erro ao guardar os dados.");
+                }
+            };
+
+            const debouncedSave = () => {
+                clearTimeout(saveTimeout);
+                saveTimeout = setTimeout(saveData, 1000);
             };
 
             // --- App Info Logic ---
             const loadAppInfo = () => {
-                clientNameInput.value = appInfo.name;
-                clientCnpjInput.value = appInfo.cnpj;
-                calendarTitleInput.value = appInfo.calendarTitle;
+                clientNameInput.value = state.appInfo.name;
+                clientCnpjInput.value = state.appInfo.cnpj;
+                calendarTitleInput.value = state.appInfo.calendarTitle;
             };
 
-            const saveAppInfo = () => {
-                appInfo.name = clientNameInput.value;
-                appInfo.cnpj = clientCnpjInput.value;
-                appInfo.calendarTitle = calendarTitleInput.value;
-                localStorage.setItem(appInfoKey, JSON.stringify(appInfo));
+            const updateAppInfo = () => {
+                state.appInfo.name = clientNameInput.value;
+                state.appInfo.cnpj = clientCnpjInput.value;
+                state.appInfo.calendarTitle = calendarTitleInput.value;
+                debouncedSave();
             };
             
-            clientNameInput.addEventListener('input', saveAppInfo);
-            clientCnpjInput.addEventListener('input', saveAppInfo);
-            calendarTitleInput.addEventListener('input', saveAppInfo);
+            // --- UI Update Functions ---
+            const updateSummary = () => {
+                const monthEvents = state.events.filter(e => 
+                    new Date(e.date).getMonth() === currentDate.getMonth() &&
+                    new Date(e.date).getFullYear() === currentDate.getFullYear()
+                );
 
-            // --- Main Render Function ---
+                const total = monthEvents.reduce((sum, e) => sum + parseFloat(e.value), 0);
+                const paid = monthEvents.filter(e => e.status === 'pago').reduce((sum, e) => sum + parseFloat(e.value), 0);
+                const pending = total - paid;
+
+                summaryTotalEl.textContent = formatCurrency(total);
+                summaryPaidEl.textContent = formatCurrency(paid);
+                summaryPendingEl.textContent = formatCurrency(pending);
+            };
+
             const renderCalendar = () => {
                 calendarGrid.innerHTML = '';
                 const year = currentDate.getFullYear();
                 const month = currentDate.getMonth();
+                const today = new Date();
+                today.setHours(0,0,0,0);
 
                 currentMonthYearEl.textContent = `${currentDate.toLocaleDateString('pt-BR', { month: 'long' })} de ${year}`;
 
                 const firstDayOfMonth = new Date(year, month, 1).getDay();
                 const lastDateOfMonth = new Date(year, month + 1, 0).getDate();
-                const lastDateOfLastMonth = new Date(year, month, 0).getDate();
 
                 for (let i = firstDayOfMonth; i > 0; i--) {
-                    calendarGrid.innerHTML += `<div class="p-2 bg-gray-100 text-gray-400 border-t border-l border-gray-200"></div>`;
+                    calendarGrid.innerHTML += `<div class="p-2 bg-gray-100 border-t border-l border-gray-200"></div>`;
                 }
 
                 for (let i = 1; i <= lastDateOfMonth; i++) {
@@ -436,29 +419,32 @@
                     dayEl.className = 'calendar-day p-2 border-t border-l border-gray-200';
                     dayEl.dataset.date = dateStr;
                     
-                    const today = new Date();
-                    const isToday = i === today.getDate() && month === today.getMonth() && year === today.getFullYear();
-                    
-                    if(isToday) {
-                        dayEl.classList.add('today');
-                    }
+                    const isToday = new Date(dateStr).getTime() === today.getTime();
+                    if(isToday) dayEl.classList.add('today');
 
                     const dayNumberEl = document.createElement('div');
                     dayNumberEl.className = 'text-sm font-semibold text-right mb-1';
                     dayNumberEl.innerHTML = `<span class="${isToday ? 'bg-[var(--brand-blue)] text-white rounded-full w-7 h-7 flex items-center justify-center float-right' : 'text-gray-500'}">${i}</span>`;
                     dayEl.appendChild(dayNumberEl);
 
-                    const dayEvents = events.filter(e => e.date === dateStr).sort((a,b) => a.taxName.localeCompare(b.taxName));
+                    const dayEvents = state.events.filter(e => e.date === dateStr).sort((a,b) => a.taxName.localeCompare(b.taxName));
                     if (dayEvents.length > 0) {
                         const eventsContainer = document.createElement('div');
                         eventsContainer.className = 'events-container space-y-1';
                         dayEvents.forEach(event => {
                             const eventEl = document.createElement('div');
-                            eventEl.className = `event-item event-${event.type}`;
-                            eventEl.dataset.eventId = event.id;
                             
-                            const formattedValue = formatCurrencyForDisplay(event.value);
+                            let statusClass = 'event-pendente';
+                            const eventDate = new Date(event.date + 'T00:00:00');
+                            if (event.status === 'pago') {
+                                statusClass = 'event-pago';
+                            } else if (event.status === 'pendente' && eventDate < today) {
+                                statusClass = 'event-em_atraso';
+                            }
 
+                            eventEl.className = `event-item ${statusClass}`;
+                            eventEl.dataset.eventId = event.id;
+                            const formattedValue = formatCurrency(event.value);
                             eventEl.innerHTML = `
                                 <span class="delete-icon" data-delete-id="${event.id}">×</span>
                                 <strong class="block text-sm pr-4">${event.taxName}</strong>
@@ -475,65 +461,227 @@
                 
                 const remainingCells = 42 - (firstDayOfMonth + lastDateOfMonth);
                  for (let i = 1; i <= remainingCells; i++) {
-                    calendarGrid.innerHTML += `<div class="p-2 bg-gray-100 text-gray-400 border-t border-l border-gray-200"></div>`;
+                    calendarGrid.innerHTML += `<div class="p-2 bg-gray-100 border-t border-l border-gray-200"></div>`;
                 }
-            };
-
-            // --- Modal Logic ---
-            const openModal = (eventId = null, date = null) => {
-                eventForm.reset();
-                const eventIdInput = document.getElementById('event-id');
-                const eventDateInput = document.getElementById('event-date');
-                const eventValueInput = document.getElementById('event-value');
-                
-                if (eventId) {
-                    const event = events.find(e => e.id === eventId);
-                    modalTitle.textContent = 'Editar Vencimento';
-                    eventIdInput.value = event.id;
-                    document.getElementById('event-tax-name').value = event.taxName;
-                    document.getElementById('event-title').value = event.title;
-                    eventDateInput.value = event.date;
-                    eventValueInput.value = formatCurrencyForInput(event.value);
-                    document.getElementById('event-type').value = event.type;
-                    deleteEventBtn.classList.remove('hidden');
-                } else {
-                    modalTitle.textContent = 'Adicionar Vencimento';
-                    eventIdInput.value = '';
-                    eventDateInput.value = date || new Date().toISOString().split('T')[0];
-                    deleteEventBtn.classList.add('hidden');
-                }
-                eventModal.classList.remove('hidden');
-            };
-
-            const closeModal = () => eventModal.classList.add('hidden');
-
-            const openConfirmModal = (eventId) => {
-                eventIdToDelete = eventId;
-                confirmModal.classList.remove('hidden');
+                updateSummary();
             };
             
-            const closeConfirmModal = () => {
-                eventIdToDelete = null;
-                confirmModal.classList.add('hidden');
+            // --- Modals ---
+            const renderModal = (type, props = {}) => {
+                modalContainer.innerHTML = ''; // Clear previous modals
+                let modalHTML = '';
+
+                switch (type) {
+                    case 'event':
+                        modalHTML = `
+                            <div id="event-modal" class="modal-backdrop">
+                                <div class="modal-content p-0">
+                                    <div class="modal-header"><h3 id="modal-title" class="text-2xl font-bold">${props.isEdit ? 'Editar Vencimento' : 'Adicionar Vencimento'}</h3></div>
+                                    <form id="event-form" class="p-6 space-y-4">
+                                        <input type="hidden" id="event-id" value="${props.event?.id || ''}">
+                                        <div>
+                                            <label class="block text-gray-700 text-sm font-bold mb-2">Nome da Obrigação:</label>
+                                            <input type="text" id="event-tax-name" class="form-input shadow-sm w-full" value="${props.event?.taxName || ''}" required>
+                                        </div>
+                                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            <div>
+                                                <label class="block text-gray-700 text-sm font-bold mb-2">Data:</label>
+                                                <input type="date" id="event-date" class="form-input shadow-sm w-full" value="${props.date || props.event?.date}" required>
+                                            </div>
+                                            <div>
+                                                <label class="block text-gray-700 text-sm font-bold mb-2">Valor (R$):</label>
+                                                <input type="text" inputmode="decimal" id="event-value" class="form-input shadow-sm w-full" value="${props.event ? props.event.value.toString().replace('.', ',') : ''}" required>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label class="block text-gray-700 text-sm font-bold mb-2">Estado:</label>
+                                            <select id="event-status" class="form-select shadow-sm w-full">
+                                                <option value="pendente" ${props.event?.status === 'pendente' ? 'selected' : ''}>Pendente</option>
+                                                <option value="pago" ${props.event?.status === 'pago' ? 'selected' : ''}>Pago</option>
+                                            </select>
+                                        </div>
+                                        <div class="flex items-center justify-end space-x-3 pt-4">
+                                            ${props.isEdit ? `<button type="button" id="delete-event-btn" class="btn bg-red-600 text-white">Excluir</button>` : ''}
+                                            <button type="button" id="cancel-btn" class="btn bg-gray-400 text-white">Cancelar</button>
+                                            <button type="submit" class="btn btn-primary">Salvar</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        `;
+                        break;
+                    case 'confirm':
+                         modalHTML = `
+                            <div id="confirm-modal" class="modal-backdrop">
+                                <div class="modal-content p-0">
+                                     <div class="modal-header"><h3 class="text-xl font-bold">Confirmar Exclusão</h3></div>
+                                     <div class="p-6">
+                                        <p class="text-gray-600 mb-6">Tem certeza de que deseja excluir este evento? Esta ação não pode ser desfeita.</p>
+                                        <div class="flex items-center justify-end space-x-3">
+                                            <button type="button" id="confirm-cancel-btn" class="btn bg-gray-400 text-white">Cancelar</button>
+                                            <button type="button" id="confirm-delete-btn" class="btn bg-red-600 text-white">Excluir</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                         `;
+                        break;
+                    case 'share':
+                        modalHTML = `
+                            <div id="share-modal" class="modal-backdrop">
+                                <div class="modal-content p-0">
+                                     <div class="modal-header"><h3 class="text-xl font-bold">Partilhar Calendário</h3></div>
+                                     <div class="p-6 space-y-4">
+                                        <p class="text-gray-600">Envie o link abaixo para o seu cliente. Ele terá acesso apenas para visualização.</p>
+                                        <input type="text" id="share-link-input" value="${props.shareLink}" readonly class="form-input w-full bg-gray-200 cursor-pointer">
+                                        <div class="flex items-center justify-end space-x-3">
+                                            <button type="button" id="copy-link-btn" class="btn btn-primary">Copiar Link</button>
+                                            <button type="button" id="close-share-btn" class="btn bg-gray-400 text-white">Fechar</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        break;
+                    case 'newCalendarInfo':
+                        modalHTML = `
+                            <div id="new-calendar-modal" class="modal-backdrop">
+                                <div class="modal-content p-0">
+                                     <div class="modal-header"><h3 class="text-xl font-bold">Calendário Criado com Sucesso!</h3></div>
+                                     <div class="p-6 space-y-4">
+                                        <p class="text-gray-600"><strong>Importante:</strong> Guarde o link abaixo para poder editar este calendário mais tarde.</p>
+                                        <div>
+                                            <label class="block text-gray-700 text-sm font-bold mb-2">Link de Edição (para si):</label>
+                                            <div class="flex space-x-2">
+                                                <input type="text" id="edit-link-input" value="${props.editLink}" readonly class="form-input w-full bg-gray-200">
+                                                <button type="button" id="copy-edit-link-btn" class="btn btn-primary px-3">Copiar</button>
+                                            </div>
+                                        </div>
+                                         <div>
+                                            <label class="block text-gray-700 text-sm font-bold mb-2">Link de Partilha (para o cliente):</label>
+                                            <div class="flex space-x-2">
+                                                <input type="text" id="share-link-input-new" value="${props.viewLink}" readonly class="form-input w-full bg-gray-200">
+                                                <button type="button" id="copy-share-link-btn" class="btn btn-primary px-3">Copiar</button>
+                                            </div>
+                                        </div>
+                                        <div class="flex items-center justify-end">
+                                            <button type="button" id="close-new-calendar-btn" class="btn btn-accent">Continuar</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        break;
+                }
+                modalContainer.innerHTML = modalHTML;
+                attachModalEventListeners(type);
             };
 
-            const deleteEvent = (eventId) => {
-                events = events.filter(event => event.id !== eventId);
-                localStorage.setItem(eventsKey, JSON.stringify(events));
+            const attachModalEventListeners = (type) => {
+                const closeModal = () => modalContainer.innerHTML = '';
+                
+                switch(type) {
+                    case 'event':
+                        document.getElementById('event-form').addEventListener('submit', handleEventFormSubmit);
+                        document.getElementById('cancel-btn').addEventListener('click', closeModal);
+                        const deleteBtn = document.getElementById('delete-event-btn');
+                        if (deleteBtn) {
+                            deleteBtn.addEventListener('click', () => {
+                                const eventId = document.getElementById('event-id').value;
+                                closeModal();
+                                eventIdToDelete = eventId;
+                                renderModal('confirm');
+                            });
+                        }
+                        break;
+                    case 'confirm':
+                        document.getElementById('confirm-delete-btn').addEventListener('click', () => {
+                            if (eventIdToDelete) {
+                                state.events = state.events.filter(e => e.id !== eventIdToDelete);
+                                debouncedSave();
+                                renderCalendar();
+                            }
+                            eventIdToDelete = null;
+                            closeModal();
+                        });
+                        document.getElementById('confirm-cancel-btn').addEventListener('click', closeModal);
+                        break;
+                    case 'share':
+                        const copyBtn = document.getElementById('copy-link-btn');
+                        const linkInput = document.getElementById('share-link-input');
+                        copyBtn.addEventListener('click', () => {
+                            linkInput.select();
+                            document.execCommand('copy');
+                            copyBtn.textContent = 'Copiado!';
+                            setTimeout(() => copyBtn.textContent = 'Copiar Link', 2000);
+                        });
+                        document.getElementById('close-share-btn').addEventListener('click', closeModal);
+                        break;
+                    case 'newCalendarInfo':
+                        document.getElementById('close-new-calendar-btn').addEventListener('click', closeModal);
+                        const copyEditBtn = document.getElementById('copy-edit-link-btn');
+                        const editLinkInput = document.getElementById('edit-link-input');
+                        copyEditBtn.addEventListener('click', () => {
+                            editLinkInput.select();
+                            document.execCommand('copy');
+                            copyEditBtn.textContent = 'Copiado!';
+                            setTimeout(() => copyEditBtn.textContent = 'Copiar', 2000);
+                        });
+                        const copyShareBtn = document.getElementById('copy-share-link-btn');
+                        const shareLinkInput = document.getElementById('share-link-input-new');
+                        copyShareBtn.addEventListener('click', () => {
+                            shareLinkInput.select();
+                            document.execCommand('copy');
+                            copyShareBtn.textContent = 'Copiado!';
+                            setTimeout(() => copyShareBtn.textContent = 'Copiar', 2000);
+                        });
+                        break;
+                }
+                const backdrop = modalContainer.querySelector('.modal-backdrop');
+                if (backdrop) {
+                    backdrop.addEventListener('click', (e) => {
+                        if (e.target === backdrop) closeModal();
+                    });
+                }
+            };
+            
+            const handleEventFormSubmit = (e) => {
+                e.preventDefault();
+                const id = document.getElementById('event-id').value;
+                const newEvent = {
+                    id: id || `${Date.now()}-${Math.random()}`,
+                    taxName: document.getElementById('event-tax-name').value,
+                    title: document.getElementById('event-title').value,
+                    date: document.getElementById('event-date').value,
+                    value: parseCurrency(document.getElementById('event-value').value),
+                    status: document.getElementById('event-status').value,
+                };
+
+                if (id) {
+                    state.events = state.events.map(event => event.id === id ? newEvent : event);
+                } else {
+                    state.events.push(newEvent);
+                }
+                
+                debouncedSave();
                 renderCalendar();
+                modalContainer.innerHTML = '';
             };
 
             // --- Event Handlers ---
             calendarGrid.addEventListener('click', (e) => {
+                if (isViewOnly) return;
                 const target = e.target;
                 if (target.classList.contains('delete-icon')) {
                     e.stopPropagation();
-                    openConfirmModal(target.dataset.deleteId);
+                    eventIdToDelete = target.dataset.deleteId;
+                    renderModal('confirm');
                 } else if (target.closest('.event-item')) {
                      e.stopPropagation();
-                    openModal(target.closest('.event-item').dataset.eventId);
+                    const event = state.events.find(e => e.id === target.closest('.event-item').dataset.eventId);
+                    renderModal('event', { isEdit: true, event });
                 } else if (target.closest('.calendar-day')) {
-                    openModal(null, target.closest('.calendar-day').dataset.date);
+                    renderModal('event', { isEdit: false, date: target.closest('.calendar-day').dataset.date });
                 }
             });
 
@@ -547,125 +695,181 @@
                 renderCalendar();
             });
 
-            addEventBtn.addEventListener('click', () => openModal());
-            cancelBtn.addEventListener('click', closeModal);
-            eventModal.addEventListener('click', (e) => {
-                if (e.target === eventModal) closeModal();
-            });
-
-            eventForm.addEventListener('submit', (e) => {
-                e.preventDefault();
-                const id = document.getElementById('event-id').value;
-                const newEvent = {
-                    id: id || Date.now().toString(),
-                    taxName: document.getElementById('event-tax-name').value,
-                    title: document.getElementById('event-title').value,
-                    date: document.getElementById('event-date').value,
-                    value: parseCurrency(document.getElementById('event-value').value),
-                    type: document.getElementById('event-type').value,
-                };
-
-                if (id) {
-                    events = events.map(event => event.id === id ? newEvent : event);
-                } else {
-                    events.push(newEvent);
+            addEventBtn.addEventListener('click', () => renderModal('event', { isEdit: false, date: new Date().toISOString().split('T')[0] }));
+            
+            shareBtn.addEventListener('click', () => {
+                if (!PUBLIC_URL) {
+                    alert('Por favor, configure o PUBLIC_URL no código para que os links de partilha funcionem corretamente.');
+                    return;
                 }
-                
-                localStorage.setItem(eventsKey, JSON.stringify(events));
-                closeModal();
-                renderCalendar();
+                const baseUrl = getBaseUrl();
+                const viewLink = `${baseUrl}?view=${calendarId}`;
+                renderModal('share', { shareLink: viewLink });
             });
-
-            deleteEventBtn.addEventListener('click', () => {
-                const id = document.getElementById('event-id').value;
-                closeModal();
-                openConfirmModal(id);
-            });
-
-            confirmDeleteBtn.addEventListener('click', () => {
-                if (eventIdToDelete) {
-                    deleteEvent(eventIdToDelete);
-                }
-                closeConfirmModal();
-            });
-
-            confirmCancelBtn.addEventListener('click', closeConfirmModal);
-            confirmModal.addEventListener('click', (e) => {
-                if (e.target === confirmModal) closeConfirmModal();
-            });
-
 
             // --- PDF Export ---
-            const prepareForPdf = (isPrinting) => {
-                if (isPrinting) {
-                    calendarTitlePdf.textContent = appInfo.calendarTitle || 'Calendário de Vencimentos';
-                    clientNamePdf.textContent = `Cliente: ${appInfo.name || 'Não informado'}`;
-                    clientCnpjPdf.textContent = `CNPJ: ${appInfo.cnpj || 'Não informado'}`;
-                    const now = new Date();
-                    const dateString = now.toLocaleDateString('pt-BR');
-                    const timeString = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-                    document.getElementById('export-date').textContent = `Exportado em: ${dateString} às ${timeString}`;
-                }
-                exportArea.classList.toggle('is-printing', isPrinting);
-            };
-            
             exportPdfBtn.addEventListener('click', () => {
-                loadingSpinner.classList.remove('hidden');
-                prepareForPdf(true);
+                showLoading('A gerar PDF...');
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
 
-                setTimeout(() => {
-                    const { jsPDF } = window.jspdf;
-                    
-                    html2canvas(exportArea, {
-                        scale: 2,
-                        useCORS: true,
-                        backgroundColor: '#ffffff'
-                    }).then(canvas => {
-                        const imgData = canvas.toDataURL('image/png');
-                        const pdf = new jsPDF({
-                            orientation: 'landscape',
-                            unit: 'mm',
-                            format: 'a4'
-                        });
-
-                        const pageHeight = pdf.internal.pageSize.getHeight();
-                        const pageWidth = pdf.internal.pageSize.getWidth();
-                        
-                        const imgWidth = canvas.width;
-                        const imgHeight = canvas.height;
-                        const ratio = imgWidth / imgHeight;
-
-                        let finalImgWidth = pageWidth;
-                        let finalImgHeight = finalImgWidth / ratio;
-
-                        if (finalImgHeight > pageHeight) {
-                            finalImgHeight = pageHeight;
-                            finalImgWidth = finalImgHeight * ratio;
+                const head = [['Data', 'Obrigação', 'Estado', 'Valor']];
+                const body = state.events
+                    .filter(e => new Date(e.date).getMonth() === currentDate.getMonth() && new Date(e.date).getFullYear() === currentDate.getFullYear())
+                    .sort((a,b) => new Date(a.date) - new Date(b.date))
+                    .map(e => {
+                        const today = new Date();
+                        today.setHours(0,0,0,0);
+                        const eventDate = new Date(e.date + 'T00:00:00');
+                        let statusText = 'Pendente';
+                        if (e.status === 'pago') {
+                            statusText = 'Pago';
+                        } else if (eventDate < today) {
+                            statusText = 'Em Atraso';
                         }
-
-                        const x = (pageWidth - finalImgWidth) / 2;
-                        const y = (pageHeight - finalImgHeight) / 2;
-
-                        pdf.addImage(imgData, 'PNG', x, y, finalImgWidth, finalImgHeight);
-                        
-                        const monthYear = currentMonthYearEl.textContent.replace(' de ', '_');
-                        const clientName = appInfo.name.replace(/ /g, '_') || 'cliente';
-                        pdf.save(`Calendario_${clientName}_${monthYear}.pdf`);
-                        
-                        prepareForPdf(false);
-                        loadingSpinner.classList.add('hidden');
-                    }).catch(err => {
-                        console.error("Error generating PDF:", err);
-                        prepareForPdf(false);
-                        loadingSpinner.classList.add('hidden');
-                        alert("Ocorreu um erro ao gerar o PDF. Tente novamente.");
+                        return [
+                            eventDate.toLocaleDateString('pt-BR'),
+                            e.taxName,
+                            statusText,
+                            formatCurrency(e.value)
+                        ];
                     });
-                }, 100);
+                
+                const pageWidth = doc.internal.pageSize.getWidth();
+                const margin = 15;
+                
+                doc.setFont('Poppins', 'bold');
+                doc.setFontSize(16);
+                doc.setTextColor(31, 45, 90); // --brand-blue
+                doc.text('Sete Soluções Fiscais', pageWidth / 2, margin, { align: 'center' });
+
+                doc.setFont('Poppins', 'normal');
+                doc.setFontSize(12);
+                doc.setTextColor(232, 160, 33); // --brand-gold
+                doc.text(state.appInfo.calendarTitle, pageWidth / 2, margin + 7, { align: 'center' });
+
+                doc.setFontSize(10);
+                doc.setTextColor(100, 116, 139);
+                doc.text(`Cliente: ${state.appInfo.name || 'Não informado'}`, pageWidth / 2, margin + 14, { align: 'center' });
+                doc.text(`CNPJ: ${state.appInfo.cnpj || 'Não informado'}`, pageWidth / 2, margin + 19, { align: 'center' });
+
+                doc.autoTable({
+                    head: head,
+                    body: body,
+                    startY: margin + 25,
+                    theme: 'grid',
+                    headStyles: {
+                        fillColor: [31, 45, 90], // --brand-blue
+                        textColor: [255, 255, 255]
+                    },
+                    styles: {
+                        font: 'Poppins',
+                        fontSize: 9
+                    },
+                    columnStyles: {
+                        3: { halign: 'right' }
+                    }
+                });
+
+                const now = new Date();
+                const dateString = now.toLocaleDateString('pt-BR');
+                const timeString = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                doc.setFontSize(8);
+                doc.setTextColor(150, 150, 150);
+                doc.text(`Exportado em: ${dateString} às ${timeString}`, pageWidth / 2, doc.internal.pageSize.getHeight() - 10, { align: 'center' });
+
+                const monthYear = currentMonthYearEl.textContent.replace(' de ', '_');
+                const clientName = appInfo.name.replace(/ /g, '_') || 'cliente';
+                doc.save(`Calendario_${clientName}_${monthYear}.pdf`);
+                
+                hideLoading();
             });
 
-            // Initial Render
-            loadAppInfo();
-            renderCalendar();
+            // --- Initialization ---
+            const init = async () => {
+                showLoading('A autenticar...');
+                try {
+                    if (initialAuthToken) {
+                        await signInWithCustomToken(auth, initialAuthToken);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+                } catch (error) {
+                    console.error("Authentication failed:", error);
+                    alert("Falha na autenticação. A aplicação poderá não funcionar corretamente.");
+                }
+
+                showLoading('A carregar dados...');
+                const params = new URLSearchParams(window.location.search);
+                const viewId = params.get('view');
+                let editId = params.get('id');
+
+                if (viewId) {
+                    calendarId = viewId;
+                    isViewOnly = true;
+                } else {
+                    calendarId = editId;
+                }
+
+                if (calendarId) {
+                    try {
+                        const docRef = doc(db, "artifacts", appId, "public/data/calendars", calendarId);
+                        const docSnap = await getDoc(docRef);
+                        if (docSnap.exists()) {
+                            const data = docSnap.data();
+                            state.appInfo = data.appInfo || state.appInfo;
+                            state.events = data.events || [];
+                        } else {
+                            console.warn("Document not found, will create new one.");
+                            if (isViewOnly) {
+                                alert("Calendário não encontrado.");
+                                return;
+                            }
+                            await saveData(); // Create the doc if it doesn't exist in edit mode
+                        }
+                    } catch (error) {
+                        console.error("Error loading data:", error);
+                        alert("Não foi possível carregar os dados do calendário.");
+                        isViewOnly = true; // Prevent further writes on error
+                    }
+                } else {
+                    // Create a new calendar
+                    try {
+                        const newDocRef = await addDoc(collection(db, "artifacts", appId, "public/data/calendars"), {
+                            ...state,
+                            createdAt: serverTimestamp()
+                        });
+                        calendarId = newDocRef.id;
+                        const baseUrl = getBaseUrl();
+                        const editLink = `${baseUrl}?id=${calendarId}`;
+                        const viewLink = `${baseUrl}?view=${calendarId}`;
+                        renderModal('newCalendarInfo', { editLink, viewLink });
+                    } catch (error) {
+                         console.error("Error creating new calendar:", error);
+                         alert("Não foi possível criar um novo calendário.");
+                         isViewOnly = true;
+                    }
+                }
+                
+                loadAppInfo();
+                renderCalendar();
+
+                if (isViewOnly) {
+                    document.querySelectorAll('input, select').forEach(el => el.disabled = true);
+                    document.getElementById('header-buttons').style.display = 'none';
+                    viewOnlyBanner.classList.remove('hidden');
+                    calendarGrid.style.cursor = 'default';
+                } else {
+                    clientNameInput.addEventListener('input', updateAppInfo);
+                    clientCnpjInput.addEventListener('input', updateAppInfo);
+                    calendarTitleInput.addEventListener('input', updateAppInfo);
+                }
+
+                hideLoading();
+                appEl.classList.remove('opacity-0');
+            };
+
+            init();
         });
     </script>
 
