@@ -285,7 +285,7 @@
         const PUBLIC_URL = ''; // `n        import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics.js";<<< SUBSTITUA PELO SEU URL REAL
 
         // --- Firebase Setup ---
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : { apiKey: "DEMO", authDomain: "DEMO", projectId: "DEMO" };
+        const firebaseConfig = typeof __firebase_config !== \x27undefined\x27 ? JSON.parse(__firebase_config) : { apiKey: "DEMO", authDomain: "DEMO", projectId: "DEMO" };\n        console.log("[CALEN] __firebase_config present:", typeof __firebase_config !== \x27undefined\x27);\n        if (typeof __firebase_config !== \x27undefined\x27) { try { const cfg = JSON.parse(__firebase_config); console.log("[CALEN] projectId:", cfg.projectId); } catch(e){ console.warn("[CALEN] config parse error", e); } }\n        console.log("[CALEN] PUBLIC_URL:", PUBLIC_URL || "<empty>");
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
@@ -932,6 +932,7 @@
 
 </body>
 </html>
+
 
 
 
