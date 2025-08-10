@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Sete Soluções Fiscais - Calendário de Vencimentos</title>
 
-  <!-- Tailwind (ok para agora; em produção ideal é build/CLI) -->
+  <!-- Tailwind (para agilizar; em produção ideal é build/CLI) -->
   <script src="https://cdn.tailwindcss.com"></script>
 
   <!-- Google Fonts -->
@@ -13,7 +13,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
 
-  <!-- jsPDF + AutoTable (para exportar) -->
+  <!-- jsPDF + AutoTable (para exportar PDF) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js" defer></script>
 
@@ -29,10 +29,8 @@
     }
     body { font-family: 'Poppins', sans-serif; background-color: #f8f9fa; }
     .calendar-grid {
-      display: grid;
-      grid-template-columns: repeat(7, 1fr);
-      gap: 1px;
-      background-color: #e9ecef;
+      display: grid; grid-template-columns: repeat(7, 1fr);
+      gap: 1px; background-color: #e9ecef;
     }
     .calendar-day.today { background-color: #f1f3f5; }
     .calendar-day:hover { background-color: #e9ecef; }
@@ -40,15 +38,9 @@
     .events-container::-webkit-scrollbar { width: 5px; }
     .events-container::-webkit-scrollbar-thumb { background-color: #ced4da; border-radius: 20px; }
     .event-item {
-      font-size: 0.8rem;
-      padding: 6px 10px;
-      border-radius: 6px;
-      margin-bottom: 6px;
-      cursor: pointer;
-      transition: all 0.2s;
-      border-left: 4px solid;
-      word-break: break-word;
-      position: relative;
+      font-size: 0.8rem; padding: 6px 10px; border-radius: 6px;
+      margin-bottom: 6px; cursor: pointer; transition: all 0.2s;
+      border-left: 4px solid; word-break: break-word; position: relative;
     }
     .delete-icon {
       position: absolute; top: 50%; right: 8px; transform: translateY(-50%);
@@ -59,7 +51,7 @@
       transition: all 0.2s; line-height: 1;
     }
     .event-item:hover .delete-icon { opacity: 1; }
-    .delete-icon:hover { background-color: #e63946; color: white; transform: translateY(-50%) scale(1.1); }
+    .delete-icon:hover { background-color: #e63946; color: #fff; transform: translateY(-50%) scale(1.1); }
     .event-pendente { background-color: #fdf2e1; color: #8c5a03; border-left-color: var(--brand-gold); }
     .event-pago { background-color: #D1FAE5; color: #065F46; border-left-color: var(--brand-green); }
     .event-em_atraso { background-color: #FEE2E2; color: #991B1B; border-left-color: var(--brand-red); }
@@ -162,14 +154,14 @@
   <div id="modal-container"></div>
 
   <script type="module">
-    // Firebase Imports
+    // Firebase Imports (CDN v10.7.1)
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getAuth, signInWithCustomToken, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
     import { getFirestore, doc, getDoc, setDoc, addDoc, collection, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
     import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics.js";
 
     // --- CONFIGURAÇÃO ---
-    const PUBLIC_URL = ''; // usa domínio atual
+    const PUBLIC_URL = ''; // vazio = usar o domínio atual do deploy
 
     // --- Firebase Setup ---
     const firebaseConfig = typeof window.__firebase_config !== 'undefined'
@@ -184,13 +176,11 @@
     const auth = getAuth(app);
     try { window.appAnalytics = getAnalytics(app); } catch (e) { console.warn("Analytics indisponível:", e?.message); }
 
-    // Logs de diagnóstico
-    console.log("[CALEN] __firebase_config present:", typeof window.__firebase_config !== 'undefined');
+    // Logs de diagnóstico (opcional)
+    console.log("[CALEN] __firebase_config:", typeof window.__firebase_config !== 'undefined');
     if (typeof window.__firebase_config !== 'undefined') {
-      try { const cfg = JSON.parse(window.__firebase_config); console.log("[CALEN] projectId:", cfg.projectId); }
-      catch (e) { console.warn("[CALEN] config parse error", e); }
+      try { console.log("[CALEN] projectId:", JSON.parse(window.__firebase_config).projectId); } catch {}
     }
-    console.log("[CALEN] PUBLIC_URL:", PUBLIC_URL || "<empty>");
 
     document.addEventListener('DOMContentLoaded', () => {
       let currentDate = new Date();
@@ -292,6 +282,7 @@
         for (let i = 1; i <= lastDate; i++) {
           const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
           const isToday = new Date(dateStr).getTime() === today.getTime();
+
           const dayEl = document.createElement('div');
           dayEl.className = 'calendar-day p-2 border-t border-l border-gray-200';
           dayEl.dataset.date = dateStr;
@@ -335,7 +326,9 @@
         updateSummary();
       };
 
+      // Modal e handlers
       const renderModal = (type, props = {}) => {
+        const modalContainer = document.getElementById('modal-container');
         modalContainer.innerHTML = '';
         let html = '';
         if (type === 'event') {
@@ -398,7 +391,7 @@
               <div class="modal-content p-0">
                 <div class="modal-header"><h3 class="text-xl font-bold">Partilhar Calendário</h3></div>
                 <div class="p-6 space-y-4">
-                  <p class="text-gray-600">Envie o link abaixo. O cliente terá acesso somente leitura.</p>
+                  <p class="text-gray-600">Envie o link abaixo. O cliente terá acesso apenas para visualização.</p>
                   <input type="text" id="share-link-input" value="${props.shareLink}" readonly class="form-input w-full bg-gray-200 cursor-pointer">
                   <div class="flex items-center justify-end space-x-3">
                     <button type="button" id="copy-link-btn" class="btn btn-primary px-3 py-2 rounded">Copiar Link</button>
@@ -440,7 +433,9 @@
       };
 
       const attachModalEventListeners = (type) => {
+        const modalContainer = document.getElementById('modal-container');
         const closeModal = () => modalContainer.innerHTML = '';
+
         if (type === 'event') {
           document.getElementById('event-form').addEventListener('submit', handleEventFormSubmit);
           document.getElementById('cancel-btn').addEventListener('click', closeModal);
@@ -456,7 +451,7 @@
           const copyBtn = document.getElementById('copy-link-btn');
           const linkInput = document.getElementById('share-link-input');
           copyBtn.addEventListener('click', async () => {
-            try { await navigator.clipboard.writeText(linkInput.value); copyBtn.textContent = 'Copiado!'; setTimeout(()=>copyBtn.textContent='Copiar Link',2000); }
+            try { await navigator.clipboard.writeText(linkInput.value); copyBtn.textContent='Copiado!'; setTimeout(()=>copyBtn.textContent='Copiar Link',2000); }
             catch { linkInput.select(); document.execCommand('copy'); copyBtn.textContent='Copiado!'; setTimeout(()=>copyBtn.textContent='Copiar Link',2000); }
           });
           document.getElementById('close-share-btn').addEventListener('click', closeModal);
@@ -475,8 +470,9 @@
             catch { shareInput.select(); document.execCommand('copy'); copyShare.textContent='Copiado!'; setTimeout(()=>copyShare.textContent='Copiar',2000); }
           });
         }
+
         const backdrop = modalContainer.querySelector('.modal-backdrop');
-        if (backdrop) backdrop.addEventListener('click', (e)=>{ if(e.target===backdrop) closeModal(); });
+        if (backdrop) backdrop.addEventListener('click', (e)=>{ if (e.target === backdrop) closeModal(); });
       };
 
       const handleEventFormSubmit = (e) => {
@@ -492,9 +488,10 @@
         };
         if (id) state.events = state.events.map(ev => ev.id === id ? newEvent : ev);
         else state.events.push(newEvent);
-        debouncedSave(); renderCalendar(); modalContainer.innerHTML = '';
+        debouncedSave(); renderCalendar(); document.getElementById('modal-container').innerHTML = '';
       };
 
+      // Click handlers do calendário
       calendarGrid.addEventListener('click', (e) => {
         if (isViewOnly) return;
         const target = e.target;
@@ -503,39 +500,42 @@
         else if (target.closest('.calendar-day')) { renderModal('event', { isEdit: false, date: target.closest('.calendar-day').dataset.date }); }
       });
 
-      prevMonthBtn.addEventListener('click', () => { currentDate.setMonth(currentDate.getMonth() - 1); renderCalendar(); });
-      nextMonthBtn.addEventListener('click', () => { currentDate.setMonth(currentDate.getMonth() + 1); renderCalendar(); });
-      addEventBtn.addEventListener('click', () => renderModal('event', { isEdit: false, date: new Date().toISOString().split('T')[0] }));
+      // Navegação & ações
+      document.getElementById('prev-month-btn').addEventListener('click', () => { currentDate.setMonth(currentDate.getMonth() - 1); renderCalendar(); });
+      document.getElementById('next-month-btn').addEventListener('click', () => { currentDate.setMonth(currentDate.getMonth() + 1); renderCalendar(); });
+      document.getElementById('add-event-btn').addEventListener('click', () => renderModal('event', { isEdit: false, date: new Date().toISOString().split('T')[0] }));
 
-      shareBtn.addEventListener('click', () => {
+      document.getElementById('share-btn').addEventListener('click', () => {
         const baseUrl = getBaseUrl();
         const viewLink = `${baseUrl}?view=${calendarId}`;
         renderModal('share', { shareLink: viewLink });
       });
 
-      forkCalendarBtn.addEventListener('click', async () => {
+      document.getElementById('fork-calendar-btn').addEventListener('click', async () => {
         showLoading('A gerar link desta edição...');
         try {
           const newDocRef = await addDoc(collection(db, "artifacts", appId, "public/data/calendars"), {
-            ...state, parentId: calendarId || null, forkedFrom: calendarId || null, forkedAt: serverTimestamp(), createdAt: serverTimestamp()
+            ...state, parentId: calendarId || null, forkedFrom: calendarId || null,
+            forkedAt: serverTimestamp(), createdAt: serverTimestamp()
           });
           const newId = newDocRef.id;
           const baseUrl = getBaseUrl();
-          const editLink = `${baseUrl}?id=${newId}`;
-          const viewLink = `${baseUrl}?view=${newId}`;
-          hideLoading();
-          renderModal('newCalendarInfo', { editLink, viewLink });
+          renderModal('newCalendarInfo', { editLink: `${baseUrl}?id=${newId}`, viewLink: `${baseUrl}?view=${newId}` });
         } catch (error) {
           console.error('Erro ao gerar link da edição:', error);
           hideLoading();
           alert('Não foi possível gerar o link desta edição.');
+        } finally {
+          hideLoading();
         }
       });
 
-      exportPdfBtn.addEventListener('click', () => {
+      // Exportar PDF
+      document.getElementById('export-pdf-btn').addEventListener('click', () => {
         showLoading('A gerar PDF...');
         const { jsPDF } = window.jspdf;
         const docPdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+
         const head = [['Data', 'Obrigação', 'Estado', 'Valor']];
         const body = state.events
           .filter(e => new Date(e.date).getMonth() === currentDate.getMonth() && new Date(e.date).getFullYear() === currentDate.getFullYear())
@@ -546,7 +546,7 @@
             let statusText = 'Pendente';
             if (e.status === 'pago') statusText = 'Pago';
             else if (eventDate < today) statusText = 'Em Atraso';
-            return [ eventDate.toLocaleDateString('pt-BR'), e.taxName, statusText, formatCurrency(e.value) ];
+            return [ eventDate.toLocaleDateString('pt-BR'), e.taxName, statusText, new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(e.value) ];
           });
 
         const pageWidth = docPdf.internal.pageSize.getWidth();
@@ -554,8 +554,10 @@
 
         docPdf.setFont('helvetica', 'bold'); docPdf.setFontSize(16); docPdf.setTextColor(31,45,90);
         docPdf.text('Sete Soluções Fiscais', pageWidth/2, margin, { align: 'center' });
+
         docPdf.setFont('helvetica', 'normal'); docPdf.setFontSize(12); docPdf.setTextColor(232,160,33);
         docPdf.text(state.appInfo.calendarTitle, pageWidth/2, margin+7, { align: 'center' });
+
         docPdf.setFontSize(10); docPdf.setTextColor(100,116,139);
         docPdf.text(`Cliente: ${state.appInfo.name || 'Não informado'}`, pageWidth/2, margin+14, { align: 'center' });
         docPdf.text(`CNPJ: ${state.appInfo.cnpj || 'Não informado'}`, pageWidth/2, margin+19, { align: 'center' });
@@ -563,20 +565,22 @@
         docPdf.autoTable({
           head, body, startY: margin+25, theme: 'grid',
           headStyles: { fillColor: [31,45,90], textColor: [255,255,255] },
-          styles: { font: 'helvetica', fontSize: 9 }, columnStyles: { 3: { halign: 'right' } }
+          styles: { font: 'helvetica', fontSize: 9 },
+          columnStyles: { 3: { halign: 'right' } }
         });
 
         const now = new Date();
         docPdf.setFontSize(8); docPdf.setTextColor(150,150,150);
-        docPdf.text(`Exportado em: ${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}`,
+        docPdf.text(`Exportado em: ${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'})}`,
           pageWidth/2, docPdf.internal.pageSize.getHeight()-10, { align: 'center' });
 
-        const monthYear = currentMonthYearEl.textContent.replace(' de ', '_');
+        const monthYear = document.getElementById('current-month-year').textContent.replace(' de ', '_');
         const clientName = (state.appInfo.name || '').replace(/ /g, '_') || 'cliente';
         docPdf.save(`Calendario_${clientName}_${monthYear}.pdf`);
         hideLoading();
       });
 
+      // Init
       const init = async () => {
         showLoading('A autenticar...');
         try {
@@ -630,7 +634,7 @@
         if (isViewOnly) {
           document.querySelectorAll('input, select, button').forEach(el => el.disabled = true);
           document.getElementById('header-buttons').style.display = 'none';
-          viewOnlyBanner.classList.remove('hidden');
+          document.getElementById('view-only-banner').classList.remove('hidden');
           calendarGrid.style.cursor = 'default';
         } else {
           clientNameInput.addEventListener('input', updateAppInfo);
@@ -639,7 +643,7 @@
         }
 
         hideLoading();
-        appEl.classList.remove('opacity-0');
+        document.getElementById('app').classList.remove('opacity-0');
       };
 
       init();
