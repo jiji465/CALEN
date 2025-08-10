@@ -724,10 +724,7 @@
             addEventBtn.addEventListener('click', () => renderModal('event', { isEdit: false, date: new Date().toISOString().split('T')[0] }));
             
             shareBtn.addEventListener('click', () => {
-                if (!PUBLIC_URL) {
-                    alert('Por favor, configure o PUBLIC_URL no código para que os links de partilha funcionem corretamente.');
-                    return;
-                }
+                
                 const baseUrl = getBaseUrl();
                 const viewLink = `${baseUrl}?view=${calendarId}`;
                 renderModal('share', { shareLink: viewLink });
@@ -735,10 +732,7 @@
 
             // --- Fork/Clone current calendar to generate independent links ---
             forkCalendarBtn.addEventListener('click', async () => {
-                if (!PUBLIC_URL) {
-                    alert('Configure o PUBLIC_URL para gerar links corretamente.');
-                    return;
-                }
+                
                 showLoading('A gerar link desta edição...');
                 try {
                     const newDocRef = await addDoc(
@@ -932,6 +926,7 @@
 
 </body>
 </html>
+
 
 
 
