@@ -7,5 +7,8 @@ window.__firebase_config = JSON.stringify({
   storageBucket: 'calendariosete-4dcbf.firebasestorage.app',
   messagingSenderId: '307736287553',
   appId: '1:307736287553:web:53544fa1471ebe7ecc69c0'
+  ,
+  measurementId: 'G-3K3R19L1TQ'
 });
 </script>
+
