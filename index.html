@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
@@ -277,29 +277,26 @@
 
     <script type="module">
         // Firebase Imports
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getAuth, signInWithCustomToken, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, setDoc, addDoc, collection, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { 
+        import { 
+        import { 
         
         // --- CONFIGURAÇÃO ---
-        const PUBLIC_URL = 'https://calendario-sete.vercel.app/'; // <<< SUBSTITUA PELO SEU URL REAL
+
 
         // --- Firebase Setup ---
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : { apiKey: "DEMO", authDomain: "DEMO", projectId: "DEMO" };
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        const 
+        const 
+        const 
 
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-        const auth = getAuth(app);
+        const app = 
+        const db = 
+        const auth = 
 
         document.addEventListener('DOMContentLoaded', () => {
             // State
             let currentDate = new Date();
-            let state = {
-                appInfo: { name: '', cnpj: '', calendarTitle: 'Calendário de Impostos' },
-                events: []
-            };
+            let state = (function(){ try { const raw = localStorage.getItem("calen_state"); if (raw) return JSON.parse(raw); } catch(e){} return { appInfo: { name: "", cnpj: "", calendarTitle: "Calendário de Impostos" }, events: [] }; })();
             let calendarId = null;
             let isViewOnly = false;
             let saveTimeout;
@@ -357,21 +354,9 @@
             };
 
             // --- Data Persistence (Firestore) ---
-            const saveData = async () => {
-                if (isViewOnly || !calendarId) return;
-                try {
-                    const docRef = doc(db, "artifacts", appId, "public/data/calendars", calendarId);
-                    await setDoc(docRef, { ...state, updatedAt: serverTimestamp() }, { merge: true });
-                } catch (error) {
-                    console.error("Error saving data: ", error);
-                    alert("Ocorreu um erro ao guardar os dados.");
-                }
-            };
+            const saveData = () => { try { localStorage.setItem("calen_state", JSON.stringify(state)); } catch (e) { console.error("Erro ao salvar localmente", e); } };
 
-            const debouncedSave = () => {
-                clearTimeout(saveTimeout);
-                saveTimeout = setTimeout(saveData, 1000);
-            };
+            const debouncedSave = () => { clearTimeout(saveTimeout); saveTimeout = setTimeout(saveData, 400); };
 
             // --- App Info Logic ---
             const loadAppInfo = () => {
@@ -380,12 +365,7 @@
                 calendarTitleInput.value = state.appInfo.calendarTitle;
             };
 
-            const updateAppInfo = () => {
-                state.appInfo.name = clientNameInput.value;
-                state.appInfo.cnpj = clientCnpjInput.value;
-                state.appInfo.calendarTitle = calendarTitleInput.value;
-                debouncedSave();
-            };
+            const updateAppInfo = () => { state.appInfo.name = clientNameInput.value; state.appInfo.cnpj = clientCnpjInput.value; state.appInfo.calendarTitle = calendarTitleInput.value; debouncedSave(); };
             
             // --- UI Update Functions ---
             const updateSummary = () => {
@@ -651,9 +631,7 @@
                         });
                         const copyShareBtn = document.getElementById('copy-share-link-btn');
                         const shareLinkInput = document.getElementById('share-link-input-new');
-                        copyShareBtn.addEventListener('click', async () => {
-                            try {
-                                await navigator.clipboard.writeText(shareLinkInput.value);
+                        copyshareBtn.addEventListener("click", () => { alert("Partilha desativada nesta versão."); });
                                 copyShareBtn.textContent = 'Copiado!';
                                 setTimeout(() => copyShareBtn.textContent = 'Copiar', 2000);
                             } catch {
@@ -698,227 +676,7 @@
 
             // --- Event Handlers ---
             calendarGrid.addEventListener('click', (e) => {
-                if (isViewOnly) return;
-                const target = e.target;
-                if (target.classList.contains('delete-icon')) {
-                    e.stopPropagation();
-                    eventIdToDelete = target.dataset.deleteId;
-                    renderModal('confirm');
-                } else if (target.closest('.event-item')) {
-                     e.stopPropagation();
-                    const event = state.events.find(e => e.id === target.closest('.event-item').dataset.eventId);
-                    renderModal('event', { isEdit: true, event });
-                } else if (target.closest('.calendar-day')) {
-                    renderModal('event', { isEdit: false, date: target.closest('.calendar-day').dataset.date });
-                }
-            });
-
-            prevMonthBtn.addEventListener('click', () => {
-                currentDate.setMonth(currentDate.getMonth() - 1);
-                renderCalendar();
-            });
-
-            nextMonthBtn.addEventListener('click', () => {
-                currentDate.setMonth(currentDate.getMonth() + 1);
-                renderCalendar();
-            });
-
-            addEventBtn.addEventListener('click', () => renderModal('event', { isEdit: false, date: new Date().toISOString().split('T')[0] }));
-            
-            shareBtn.addEventListener('click', () => {
-                if (!PUBLIC_URL) {
-                    alert('Por favor, configure o PUBLIC_URL no código para que os links de partilha funcionem corretamente.');
-                    return;
-                }
-                const baseUrl = getBaseUrl();
-                const viewLink = `${baseUrl}?view=${calendarId}`;
-                renderModal('share', { shareLink: viewLink });
-            });
-
-            // --- Fork/Clone current calendar to generate independent links ---
-            forkCalendarBtn.addEventListener('click', async () => {
-                if (!PUBLIC_URL) {
-                    alert('Configure o PUBLIC_URL para gerar links corretamente.');
-                    return;
-                }
-                showLoading('A gerar link desta edição...');
-                try {
-                    const newDocRef = await addDoc(
-                        collection(db, "artifacts", appId, "public/data/calendars"),
-                        {
-                            ...state,
-                            parentId: calendarId || null,
-                            forkedFrom: calendarId || null,
-                            forkedAt: serverTimestamp(),
-                            createdAt: serverTimestamp()
-                        }
-                    );
-                    const newId = newDocRef.id;
-                    const baseUrl = getBaseUrl();
-                    const editLink = `${baseUrl}?id=${newId}`;
-                    const viewLink = `${baseUrl}?view=${newId}`;
-                    hideLoading();
-                    renderModal('newCalendarInfo', { editLink, viewLink });
-                } catch (error) {
-                    console.error('Erro ao gerar link da edição:', error);
-                    hideLoading();
-                    alert('Não foi possível gerar o link desta edição.');
-                }
-            });
-
-            // --- PDF Export ---
-            exportPdfBtn.addEventListener('click', () => {
-                showLoading('A gerar PDF...');
-                const { jsPDF } = window.jspdf;
-                const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-
-                const head = [['Data', 'Obrigação', 'Estado', 'Valor']];
-                const body = state.events
-                    .filter(e => new Date(e.date).getMonth() === currentDate.getMonth() && new Date(e.date).getFullYear() === currentDate.getFullYear())
-                    .sort((a,b) => new Date(a.date) - new Date(b.date))
-                    .map(e => {
-                        const today = new Date();
-                        today.setHours(0,0,0,0);
-                        const eventDate = new Date(e.date + 'T00:00:00');
-                        let statusText = 'Pendente';
-                        if (e.status === 'pago') {
-                            statusText = 'Pago';
-                        } else if (eventDate < today) {
-                            statusText = 'Em Atraso';
-                        }
-                        return [
-                            eventDate.toLocaleDateString('pt-BR'),
-                            e.taxName,
-                            statusText,
-                            formatCurrency(e.value)
-                        ];
-                    });
-                
-                const pageWidth = doc.internal.pageSize.getWidth();
-                const margin = 15;
-                
-                doc.setFont('helvetica', 'bold');
-                doc.setFontSize(16);
-                doc.setTextColor(31, 45, 90); // --brand-blue
-                doc.text('Sete Soluções Fiscais', pageWidth / 2, margin, { align: 'center' });
-
-                doc.setFont('helvetica', 'normal');
-                doc.setFontSize(12);
-                doc.setTextColor(232, 160, 33); // --brand-gold
-                doc.text(state.appInfo.calendarTitle, pageWidth / 2, margin + 7, { align: 'center' });
-
-                doc.setFontSize(10);
-                doc.setTextColor(100, 116, 139);
-                doc.text(`Cliente: ${state.appInfo.name || 'Não informado'}`, pageWidth / 2, margin + 14, { align: 'center' });
-                doc.text(`CNPJ: ${state.appInfo.cnpj || 'Não informado'}`, pageWidth / 2, margin + 19, { align: 'center' });
-
-                doc.autoTable({
-                    head: head,
-                    body: body,
-                    startY: margin + 25,
-                    theme: 'grid',
-                    headStyles: {
-                        fillColor: [31, 45, 90], // --brand-blue
-                        textColor: [255, 255, 255]
-                    },
-                    styles: {
-                        font: 'helvetica',
-                        fontSize: 9
-                    },
-                    columnStyles: {
-                        3: { halign: 'right' }
-                    }
-                });
-
-                const now = new Date();
-                const dateString = now.toLocaleDateString('pt-BR');
-                const timeString = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-                doc.setFontSize(8);
-                doc.setTextColor(150, 150, 150);
-                doc.text(`Exportado em: ${dateString} às ${timeString}`, pageWidth / 2, doc.internal.pageSize.getHeight() - 10, { align: 'center' });
-
-                const monthYear = currentMonthYearEl.textContent.replace(' de ', '_');
-                const clientName = (state.appInfo.name || '').replace(/ /g, '_') || 'cliente';
-                doc.save(`Calendario_${clientName}_${monthYear}.pdf`);
-                
-                hideLoading();
-            });
-
-            // --- Initialization ---
-            const init = async () => {
-                showLoading('A autenticar...');
-                try {
-                    if (initialAuthToken) {
-                        await signInWithCustomToken(auth, initialAuthToken);
-                    } else {
-                        await signInAnonymously(auth);
-                    }
-                } catch (error) {
-                    console.error("Authentication failed:", error);
-                    alert("Falha na autenticação. A aplicação poderá não funcionar corretamente.");
-                }
-
-                showLoading('A carregar dados...');
-                const params = new URLSearchParams(window.location.search);
-                const viewId = params.get('view');
-                let editId = params.get('id');
-
-                if (viewId) {
-                    calendarId = viewId;
-                    isViewOnly = true;
-                } else {
-                    calendarId = editId;
-                }
-
-                if (calendarId) {
-                    try {
-                        const docRef = doc(db, "artifacts", appId, "public/data/calendars", calendarId);
-                        const docSnap = await getDoc(docRef);
-                        if (docSnap.exists()) {
-                            const data = docSnap.data();
-                            state.appInfo = data.appInfo || state.appInfo;
-                            state.events = data.events || [];
-                        } else {
-                            console.warn("Document not found, will create new one.");
-                            if (isViewOnly) {
-                                alert("Calendário não encontrado.");
-                                return;
-                            }
-                            await saveData(); // Create the doc if it doesn't exist in edit mode
-                        }
-                    } catch (error) {
-                        console.error("Error loading data:", error);
-                        alert("Não foi possível carregar os dados do calendário.");
-                        isViewOnly = true; // Prevent further writes on error
-                    }
-                } else {
-                    // Create a new calendar
-                    try {
-                        const newDocRef = await addDoc(collection(db, "artifacts", appId, "public/data/calendars"), {
-                            ...state,
-                            createdAt: serverTimestamp()
-                        });
-                        calendarId = newDocRef.id;
-                        const baseUrl = getBaseUrl();
-                        const editLink = `${baseUrl}?id=${calendarId}`;
-                        const viewLink = `${baseUrl}?view=${calendarId}`;
-                        renderModal('newCalendarInfo', { editLink, viewLink });
-                    } catch (error) {
-                         console.error("Error creating new calendar:", error);
-                         alert("Não foi possível criar um novo calendário.");
-                         isViewOnly = true;
-                    }
-                }
-                
-                loadAppInfo();
-                renderCalendar();
-
-                if (isViewOnly) {
-                    document.querySelectorAll('input, select').forEach(el => el.disabled = true);
-                    document.getElementById('header-buttons').style.display = 'none';
-                    viewOnlyBanner.classList.remove('hidden');
-                    calendarGrid.style.cursor = 'default';
-                } else {
+                {
                     clientNameInput.addEventListener('input', updateAppInfo);
                     clientCnpjInput.addEventListener('input', updateAppInfo);
                     calendarTitleInput.addEventListener('input', updateAppInfo);
@@ -934,3 +692,4 @@
 
 </body>
 </html>
+
