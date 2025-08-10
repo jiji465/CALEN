@@ -1,4 +1,4 @@
-﻿<script>
+﻿
 window.__app_id = 'calen';
 window.__firebase_config = JSON.stringify({
   apiKey: 'AIzaSyC3E9e-peRZVtBp0XAY5rnXE0x5jbVwLsU',
@@ -10,5 +10,4 @@ window.__firebase_config = JSON.stringify({
   ,
   measurementId: 'G-3K3R19L1TQ'
 });
-</script>
 
