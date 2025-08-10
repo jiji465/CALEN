@@ -1,11 +1,11 @@
-<script>
+﻿<script>
 window.__app_id = 'calen';
 window.__firebase_config = JSON.stringify({
-  apiKey: 'SUA_API_KEY',
-  authDomain: 'SEU_PROJECT_ID.firebaseapp.com',
-  projectId: 'SEU_PROJECT_ID',
-  storageBucket: 'SEU_PROJECT_ID.appspot.com',
-  messagingSenderId: 'SEU_SENDER_ID',
-  appId: 'SEU_APP_ID'
+  apiKey: 'AIzaSyC3E9e-peRZVtBp0XAY5rnXE0x5jbVwLsU',
+  authDomain: 'calendariosete-4dcbf.firebaseapp.com',
+  projectId: 'calendariosete-4dcbf',
+  storageBucket: 'calendariosete-4dcbf.firebasestorage.app',
+  messagingSenderId: '307736287553',
+  appId: '1:307736287553:web:53544fa1471ebe7ecc69c0'
 });
 </script>
